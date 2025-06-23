@@ -1,0 +1,58 @@
+#!/bin/bash
+
+echo "===== Deploying Lambda Function with Unique Narration Features ====="
+echo ""
+
+# Load environment variables
+if [ -f "../.env.production" ]; then
+    export $(cat ../.env.production | grep -v '^#' | xargs)
+fi
+
+# Configuration from environment variables
+AWS_PROFILE=${AWS_PROFILE:-default}
+AWS_REGION=${AWS_REGION:-us-west-2}
+LAMBDA_FUNCTION_NAME=${LAMBDA_FUNCTION_NAME:-CulturalHarmonyFunction}
+
+# Check if we're in the right directory
+if [ ! -f "achamin_lambda_function.py" ]; then
+    echo "Error: achamin_lambda_function.py not found in current directory"
+    exit 1
+fi
+
+# Create deployment package
+echo "Creating deployment package..."
+zip -r function.zip achamin_lambda_function.py
+
+# Deploy to AWS Lambda
+echo "Deploying to AWS Lambda..."
+echo "Using profile: $AWS_PROFILE"
+echo "Using region: $AWS_REGION"
+echo "Function name: $LAMBDA_FUNCTION_NAME"
+
+aws lambda update-function-code \
+    --function-name $LAMBDA_FUNCTION_NAME \
+    --zip-file fileb://function.zip \
+    --profile $AWS_PROFILE \
+    --region $AWS_REGION
+
+if [ $? -eq 0 ]; then
+    echo "✅ Lambda function updated successfully!"
+    echo ""
+    echo "New features deployed:"
+    echo "• 8 unique narration styles (storytelling, educational, conversational, poetic, historical, personal, analytical, inspirational)"
+    echo "• 8 different Polly voices for variety"
+    echo "• Enhanced cultural context generation with higher creativity"
+    echo "• Neural engine for better audio quality"
+    echo "• Unique request tracking with narration metadata"
+    echo "• Environment variable configuration"
+    echo ""
+    echo "Each image upload will now receive a unique cultural narration!"
+else
+    echo "❌ Failed to update Lambda function"
+    exit 1
+fi
+
+# Clean up
+rm function.zip
+
+echo "Deployment complete!"

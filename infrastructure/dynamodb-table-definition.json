@@ -1,0 +1,87 @@
+{
+  "TableName": "achamin-image-metadata",
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "request_id",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "timestamp",
+      "AttributeType": "N"
+    },
+    {
+      "AttributeName": "mood",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "themes",
+      "AttributeType": "S"
+    }
+  ],
+  "KeySchema": [
+    {
+      "AttributeName": "request_id",
+      "KeyType": "HASH"
+    }
+  ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "timestamp-index",
+      "KeySchema": [
+        {
+          "AttributeName": "timestamp",
+          "KeyType": "HASH"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      },
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 5,
+        "WriteCapacityUnits": 5
+      }
+    },
+    {
+      "IndexName": "mood-themes-index",
+      "KeySchema": [
+        {
+          "AttributeName": "mood",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "themes",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      },
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 5,
+        "WriteCapacityUnits": 5
+      }
+    }
+  ],
+  "ProvisionedThroughput": {
+    "ReadCapacityUnits": 10,
+    "WriteCapacityUnits": 10
+  },
+  "StreamSpecification": {
+    "StreamEnabled": true,
+    "StreamViewType": "NEW_AND_OLD_IMAGES"
+  },
+  "Tags": [
+    {
+      "Key": "Project",
+      "Value": "Achamin"
+    },
+    {
+      "Key": "Environment",
+      "Value": "Production"
+    },
+    {
+      "Key": "Purpose",
+      "Value": "Image Metadata Storage"
+    }
+  ]
+} 

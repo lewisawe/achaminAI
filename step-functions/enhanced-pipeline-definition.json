@@ -1,0 +1,155 @@
+{
+  "Comment": "Enhanced Achamin Cultural Analysis Pipeline",
+  "StartAt": "ImageAnalysis",
+  "States": {
+    "ImageAnalysis": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:achamin-image-analysis",
+      "Parameters": {
+        "image_data.$": "$.image_data",
+        "request_id.$": "$.request_id"
+      },
+      "ResultPath": "$.analysis_result",
+      "Next": "MetadataMapping",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ErrorHandler",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "MetadataMapping": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:achamin-metadata-mapping",
+      "Parameters": {
+        "labels.$": "$.analysis_result.labels",
+        "request_id.$": "$.request_id"
+      },
+      "ResultPath": "$.metadata",
+      "Next": "StoryGeneration",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ErrorHandler",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "StoryGeneration": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:achamin-story-generation",
+      "Parameters": {
+        "labels.$": "$.analysis_result.labels",
+        "metadata.$": "$.metadata",
+        "request_id.$": "$.request_id"
+      },
+      "ResultPath": "$.story_result",
+      "Next": "AudioProduction",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ErrorHandler",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "AudioProduction": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "NarrationGeneration",
+          "States": {
+            "NarrationGeneration": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:achamin-narration-generation",
+              "Parameters": {
+                "story.$": "$.story_result.story",
+                "voice_characteristics.$": "$.metadata.voice_characteristics",
+                "request_id.$": "$.request_id"
+              },
+              "ResultPath": "$.narration_result",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "MusicSelection",
+          "States": {
+            "MusicSelection": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:achamin-music-selection",
+              "Parameters": {
+                "music_style.$": "$.metadata.music_style",
+                "mood.$": "$.metadata.mood",
+                "request_id.$": "$.request_id"
+              },
+              "ResultPath": "$.music_result",
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "AudioMixing",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ErrorHandler",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "AudioMixing": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:achamin-audio-mixing",
+      "Parameters": {
+        "narration_audio.$": "$.narration_result.audio_url",
+        "background_music.$": "$.music_result.music_url",
+        "request_id.$": "$.request_id"
+      },
+      "ResultPath": "$.final_audio",
+      "Next": "MetadataStorage",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ErrorHandler",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "MetadataStorage": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:achamin-metadata-storage",
+      "Parameters": {
+        "request_id.$": "$.request_id",
+        "analysis_result.$": "$.analysis_result",
+        "metadata.$": "$.metadata",
+        "story_result.$": "$.story_result",
+        "final_audio.$": "$.final_audio"
+      },
+      "ResultPath": "$.storage_result",
+      "Next": "Success",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "ErrorHandler",
+          "ResultPath": "$.error"
+        }
+      ]
+    },
+    "Success": {
+      "Type": "Succeed",
+      "Comment": "Pipeline completed successfully"
+    },
+    "ErrorHandler": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:${AWS_REGION}:${AWS_ACCOUNT_ID}:function:achamin-error-handler",
+      "Parameters": {
+        "request_id.$": "$.request_id",
+        "error.$": "$.error",
+        "execution_arn.$": "$$.Execution.Arn"
+      },
+      "End": true
+    }
+  }
+} 

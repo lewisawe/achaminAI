@@ -1,0 +1,33 @@
+# Production and sensitive files
+.env.production
+.env.local
+.env.development
+.env.test
+backup-*
+production/
+
+# AWS credentials and configuration
+.aws/
+aws.config
+credentials
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+logs/
+temp/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Python virtual environments
+venv/
+__pycache__/
+*.pyc

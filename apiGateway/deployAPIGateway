@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+
+# Create REST API
+
+aws apigateway create-rest-api --name AchaminAPI
+
+
+# Get the API ID from the output of the previous command
+API_ID=<api_id_from_output>
+
+# Get the root resource ID
+
+ROOT_RESOURCE_ID=$(aws apigateway get-resources --rest-api-id $API_ID --query 'items[0].id' --output text)
+
+# Create a resource
+aws apigateway create-resource --rest-api-id $API_ID --parent-id $ROOT_RESOURCE_ID --path-part "analyze"
+RESOURCE_ID=$(aws apigateway get-resources --rest-api-id $API_ID --query "items[?pathPart=='analyze'].id" --output text)
+
+# Create method
+aws apigateway put-method --rest-api-id $API_ID --resource-id $RESOURCE_ID --http-method POST --authorization-type NONE
+
+# Set Lambda integration
+aws apigateway put-integration \
+  --rest-api-id $API_ID \
+  --resource-id $RESOURCE_ID \
+  --http-method POST \
+  --type AWS_PROXY \
+  --integration-http-method POST \
+  --uri arn:aws:apigateway:$AWS_DEFAULT_REGION:lambda:path/2015-03-31/functions/arn:aws:lambda:us-west-2:xxxxxxxx:function:CulturalHarmonyFunction/invocations
+
+# Create OPTIONS method for CORS
+aws --profile simi-ops apigateway put-method --rest-api-id $API_ID --resource-id $RESOURCE_ID --http-method OPTIONS --authorization-type NONE
+
+# Set up MOCK integration for OPTIONS method
+aws --profile simi-ops apigateway put-integration \
+  --rest-api-id $API_ID \
+  --resource-id $RESOURCE_ID \
+  --http-method OPTIONS \
+  --type MOCK \
+  --request-templates '{"application/json":"{\"statusCode\": 200}"}'
+
+# Set up method response for OPTIONS
+aws --profile simi-ops apigateway put-method-response \
+  --rest-api-id $API_ID \
+  --resource-id $RESOURCE_ID \
+  --http-method OPTIONS \
+  --status-code 200 \
+  --response-parameters '{
+    "method.response.header.Access-Control-Allow-Headers": true,
+    "method.response.header.Access-Control-Allow-Methods": true,
+    "method.response.header.Access-Control-Allow-Origin": true
+  }'
+
+# Set up integration response for OPTIONS
+aws --profile simi-ops apigateway put-integration-response \
+  --rest-api-id $API_ID \
+  --resource-id $RESOURCE_ID \
+  --http-method OPTIONS \
+  --status-code 200 \
+  --response-parameters '{
+    "method.response.header.Access-Control-Allow-Headers": "'\''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'\''",
+    "method.response.header.Access-Control-Allow-Methods": "'\''GET,POST,PUT,DELETE,OPTIONS'\''",
+    "method.response.header.Access-Control-Allow-Origin": "'\''*'\''"
+  }'
+
+# Deploy the API
+aws apigateway create-deployment --rest-api-id $API_ID --stage-name prod
+
